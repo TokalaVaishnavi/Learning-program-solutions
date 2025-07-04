@@ -1,0 +1,39 @@
+SET SERVEROUTPUT ON;
+
+BEGIN
+  FOR cust IN (SELECT customer_id FROM customers WHERE age > 60) LOOP
+    UPDATE customers
+    SET interest_rate = interest_rate - 1
+    WHERE customer_id = cust.customer_id;
+  END LOOP;
+END;
+/
+CREATE TABLE customers (
+  customer_id NUMBER PRIMARY KEY,
+  customer_name VARCHAR2(100),
+  age NUMBER,
+  balance NUMBER,
+  interest_rate NUMBER,
+  isvip CHAR(1)
+);
+
+
+BEGIN
+  FOR cust IN (SELECT customer_id FROM customers WHERE balance > 10000) LOOP
+    UPDATE customers
+    SET isvip = 'Y'
+    WHERE customer_id = cust.customer_id;
+  END LOOP;
+END;
+/
+
+BEGIN
+  FOR loan IN (
+    SELECT customer_id, due_date
+    FROM loans
+    WHERE due_date BETWEEN SYSDATE AND SYSDATE + 30
+  ) LOOP
+    DBMS_OUTPUT.PUT_LINE('Reminder: Customer ' || loan.customer_id || ' loan due on ' || loan.due_date);
+  END LOOP;
+END;
+/

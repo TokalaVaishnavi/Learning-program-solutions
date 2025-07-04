@@ -1,0 +1,124 @@
+
+SET SERVEROUTPUT ON;
+
+
+-- Table for savings accounts (used in Scenario 1)
+CREATE TABLE savings_accounts (
+  account_id NUMBER PRIMARY KEY,
+  customer_id NUMBER,
+  balance NUMBER
+);
+
+-- Table for employees (used in Scenario 2)
+CREATE TABLE employees (
+  emp_id NUMBER PRIMARY KEY,
+  emp_name VARCHAR2(100),
+  department_id NUMBER,
+  salary NUMBER
+);
+
+-- Table for bank accounts (used in Scenario 3)
+CREATE TABLE bank_accounts (
+  account_id NUMBER PRIMARY KEY,
+  customer_id NUMBER,
+  balance NUMBER
+);
+
+
+
+-- Sample savings accounts for interest calculation
+INSERT INTO savings_accounts VALUES (1, 101, 1000);
+INSERT INTO savings_accounts VALUES (2, 102, 2000);
+
+-- Sample employees with different departments
+INSERT INTO employees VALUES (1, 'Alice', 10, 5000);
+INSERT INTO employees VALUES (2, 'Bob', 10, 6000);
+INSERT INTO employees VALUES (3, 'Carol', 20, 7000);
+
+-- Sample bank accounts for fund transfer
+INSERT INTO bank_accounts VALUES (1, 101, 3000);
+INSERT INTO bank_accounts VALUES (2, 102, 1500);
+
+-- Save the inserted data
+COMMIT;
+
+-- This procedure increases all savings account balances by 1%
+
+CREATE OR REPLACE PROCEDURE ProcessMonthlyInterest IS
+BEGIN
+  UPDATE savings_accounts
+  SET balance = balance * 1.01; -- Apply 1% interest
+  COMMIT;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE UpdateEmployeeBonus(
+  p_dept_id IN NUMBER,           -- Department to target
+  p_bonus_percent IN NUMBER      -- Bonus percentage to apply
+) IS
+BEGIN
+  UPDATE employees
+  SET salary = salary + (salary * p_bonus_percent / 100)
+  WHERE department_id = p_dept_id;
+
+  COMMIT;
+END;
+/
+
+
+
+
+CREATE OR REPLACE PROCEDURE TransferFunds(
+  p_from_account IN NUMBER,    -- Source account
+  p_to_account IN NUMBER,      -- Target account
+  p_amount IN NUMBER           -- Amount to transfer
+) IS
+  insufficient_balance EXCEPTION;
+BEGIN
+  -- Check source balance
+  DECLARE
+    v_balance NUMBER;
+  BEGIN
+    SELECT balance INTO v_balance
+    FROM bank_accounts
+    WHERE account_id = p_from_account;
+
+    IF v_balance < p_amount THEN
+      RAISE insufficient_balance;
+    END IF;
+  END;
+
+  -- Perform the fund transfer
+  UPDATE bank_accounts
+  SET balance = balance - p_amount
+  WHERE account_id = p_from_account;
+
+  UPDATE bank_accounts
+  SET balance = balance + p_amount
+  WHERE account_id = p_to_account;
+
+  COMMIT;
+
+-- Handle errors
+EXCEPTION
+  WHEN insufficient_balance THEN
+    DBMS_OUTPUT.PUT_LINE(' Transfer failed: Insufficient funds.');
+  WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE(' Unexpected error: ' || SQLERRM);
+END;
+/
+
+
+
+BEGIN
+  -- Run Scenario 1: Apply monthly interest
+  ProcessMonthlyInterest;
+
+  -- Run Scenario 2: Add 10% bonus to department 10
+  UpdateEmployeeBonus(10, 10);
+
+  -- Run Scenario 3: Transfer 500 from account 1 to account 2
+  TransferFunds(1, 2, 500);
+END;
+/
